@@ -1142,7 +1142,7 @@ class BeeCmd:
         """
         logger.debug('Cancelling print...')
 
-        if self.isTransferring() is True:
+        if (self.isTransferring() or self.isHeating())is True:
             self.cancelTransfer()
             time.sleep(2)  # Waits for thread to stop transferring
             with self._commandLock:
