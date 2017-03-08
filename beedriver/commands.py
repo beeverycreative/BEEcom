@@ -78,6 +78,7 @@ class BeeCmd:
     startStatusMonitor()                                      Starts the print status monitor thread
     isHeating()                                               Returns True if heating is still in progress
     isTransferring()                                          Returns True if a file is being transfer
+    isPaused()                                                Returns True if the printer is in Pause state
     """
 
     MESSAGE_SIZE = 512
@@ -316,6 +317,24 @@ class BeeCmd:
 
         status = self.getStatus()
         if status is not None and status == 'Ready':
+            return True
+
+        return False
+
+    # *************************************************************************
+    #                            isPaused Method
+    # *************************************************************************
+    def isPaused(self):
+        r"""
+        isPaused method
+
+        return True if the printer is in Pause state or False if not
+        """
+        if self.isTransferring():
+            return False
+
+        status = self.getStatus()
+        if status is not None and status == 'Pause':
             return True
 
         return False
