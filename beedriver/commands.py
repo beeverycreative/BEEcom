@@ -79,6 +79,7 @@ class BeeCmd:
     isHeating()                                               Returns True if heating is still in progress
     isTransferring()                                          Returns True if a file is being transfer
     isPaused()                                                Returns True if the printer is in Pause state
+    isResuming()                                              Returns True if the printer is in Resuming state
     """
 
     MESSAGE_SIZE = 512
@@ -109,6 +110,7 @@ class BeeCmd:
         self._pausing = False
         self._paused = False
         self._shutdown = False
+        self._resuming = False
 
         self._inBootloader = False
         self._inFirmware = False
@@ -340,6 +342,21 @@ class BeeCmd:
         return False
 
     # *************************************************************************
+    #                            isResuming Method
+    # *************************************************************************
+    def isResuming(self):
+        r"""
+        isResuming method
+
+        return True if the printer is in Resuming state or False if not
+        """
+        self.getStatus()  # updates the status
+        if self._resuming:
+            return True
+
+        return False
+
+    # *************************************************************************
     #                            isShutdown Method
     # *************************************************************************
     def isShutdown(self):
@@ -407,6 +424,7 @@ class BeeCmd:
                 elif 's:5' in resp.lower():
                     status = 'SD_Print'
                     done = True
+                    self._resuming = False
                 elif 's:6' in resp.lower():
                     status = 'Transfer'
                     done = True
@@ -1455,6 +1473,7 @@ class BeeCmd:
             self._beeCon.sendCmd('M643\n')
             self._pausing = False
             self._shutdown = False
+            self._resuming = True
 
         return
     
