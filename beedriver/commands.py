@@ -233,7 +233,7 @@ class BeeCmd:
 
             tries = self.BLOCK_SIZE + 1
 
-            resp = self._beeCon.read()
+            self._beeCon.read()
             acc_resp = ""
 
             while "ok" not in acc_resp.lower() and tries > 0:
@@ -399,7 +399,10 @@ class BeeCmd:
                     done = True
 
                 elif 's:3' in resp.lower():
-                    status = 'Ready'
+                    if 'W:Waiting4File' in resp.lower():
+                        status = 'Heating'
+                    else:
+                        status = 'Ready'
                     done = True
                 elif 's:4' in resp.lower():
                     status = 'Moving'
@@ -519,7 +522,7 @@ class BeeCmd:
             return None
 
         with self._commandLock:
-            resp = self._beeCon.sendCmd("G91\n")
+            self._beeCon.sendCmd("G91\n")
 
             newX = 0
             newY = 0
@@ -927,7 +930,7 @@ class BeeCmd:
     # *************************************************************************
     #                            repeatLastPrint Method
     # *************************************************************************
-    def repeatLastPrint(self,printTemperature=200):
+    def repeatLastPrint(self, printTemperature=200):
         r"""
         repeatLastPrint method
 
@@ -1374,6 +1377,10 @@ class BeeCmd:
         """
         if self._transfThread is not None:
             return self._transfThread.isHeating()
+
+        # In case the print is resuming and there is no transfer thread
+        if self.getStatus() == 'Heating':
+            return True
 
         return False
     
