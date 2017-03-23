@@ -53,7 +53,7 @@ class Conn:
     # *************************************************************************
     #                            __init__ Method
     # *************************************************************************
-    def __init__(self, shutdownCallback=None, dummyPlug=False):
+    def __init__(self, disconnectCallback=None, dummyPlug=False):
         r"""
         __init__ Method
 
@@ -78,7 +78,7 @@ class Conn:
         self._dummyPlug = dummyPlug
         self._dummyTemperature = 0.0
 
-        self._shutdownCallback = shutdownCallback
+        self._disconnectCallback = disconnectCallback
 
         self.connected = None
 
@@ -622,7 +622,7 @@ class Conn:
         Starts the connection monitor thread to check if the connection is still active
         :return:
         """
-        if self._shutdownCallback is not None and self._connectionMonitor is None:
+        if self._disconnectCallback is not None and self._connectionMonitor is None:
             self._connectionMonitor = threading.Thread(
                 target=self._connectionMonitorThread, name="bee_connection._conn_monitor_thread")
             self._connectionMonitor.daemon = True
@@ -649,24 +649,25 @@ class Conn:
         """
         # This variable can be used if we want to simulate a disconnect from the printer
         # if no disconnect is pretended just use a big enough value
-        dummyPlugShutdownSim = 10000  # number of 5 second cycles before a shutdown is simulated
+        dummyPlugDisconnectSim = 10000  # number of 3 second cycles before a shutdown is simulated
 
         while self.connected is True:
-            time.sleep(5)
+            time.sleep(3)
 
             if self._monitorConnection is True:
                 if self._dummyPlug is True:
-                    if dummyPlugShutdownSim == 0:
-                        self._shutdownCallback()
+                    if dummyPlugDisconnectSim == 0:
+                        self._disconnectCallback()
                         self.connected = False
+                        return
                     else:
-                        dummyPlugShutdownSim -= 1
+                        dummyPlugDisconnectSim -= 1
                         continue
 
                 try:
                     bytesw = self.write('M637\n')
                     if bytesw == 0:
-                        self._shutdownCallback()
+                        self._disconnectCallback()
                         self.connected = False
                 except:
                     continue
