@@ -1179,17 +1179,22 @@ class BeeCmd:
         """
         logger.debug('Cancelling print...')
 
-        if (self.isTransferring() or self.isHeating())is True:
+        if (self.isTransferring() or self.isHeating()) is True:
             self.cancelTransfer()
             time.sleep(2)  # Waits for thread to stop transferring
             with self._commandLock:
                 self._beeCon.sendCmd("G28\n", "3")
             return True
 
+        # We must make sure the status monitor thread if finished before cancelling the print to avoid
+        # status updates even after the print was cancelled
+        self.stopStatusMonitor()
+        while self._statusThread.isRunning():
+            time.sleep(0.1)
+
         with self._commandLock:
             self._beeCon.sendCmd("M112\n", "3")
 
-        self.stopStatusMonitor()
         return True
 
     # *************************************************************************
@@ -1612,7 +1617,11 @@ class BeeCmd:
 
         Returns getNozzle Size int
         """
-        nozzle = 0.4
+        nozzle = 400
+        if self._beeCon.dummyPlugConnected():
+            nozzle = 600
+            return nozzle
+
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
             return None
