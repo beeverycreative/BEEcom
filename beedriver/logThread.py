@@ -226,9 +226,9 @@ class LogThread(threading.Thread):
         self._t = 0
         while not self._stopLog:
             reply = self.beeCon.sendCmd("M105\n")
-            parsedLine = parsers.parseTemperatureReply(reply,self._printer)
+            parsedLine = parsers.parseTemperatureReply(reply)
             if parsedLine is not None:
-                i = i + 1
+                i = self._t + 1
                 self._logFile.write("{},{}".format(self._t, parsedLine))
                 if not self._hideLog:
                     logger.info(parsedLine)
