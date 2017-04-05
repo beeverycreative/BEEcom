@@ -116,7 +116,7 @@ def parseTemperatureReply(replyLine):
         re6 = '.*?'  # Non-greedy match on filler
         re7 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 2
         re8 = '.*?'  # Non-greedy match on filler
-        re9 = '(R)'  # Any Single Character 3
+        re9 = '(C)'  # Any Single Character 3
         re10 = '.*?'  # Non-greedy match on filler
         re11 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 3
 

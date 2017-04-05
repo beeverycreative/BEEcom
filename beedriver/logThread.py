@@ -153,7 +153,7 @@ class LogThread(threading.Thread):
         self._t = 0
         for i in range(0,self._samples):
             reply = self.beeCon.sendCmd("M105\n")
-            parsedLine = parsers.parseTemperatureReply(reply,self._printer)
+            parsedLine = parsers.parseTemperatureReply(reply)
             if parsedLine is not None:
                 self._logFile.write("{},{}".format(self._t, parsedLine))
                 if not self._hideLog:
