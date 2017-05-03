@@ -212,7 +212,7 @@ class FileTransferThread(threading.Thread):
                 bytesWriten = self.beeCon.write(buf)                              # Send 64 bytes to the printer
 
                 #time.sleep(0.0000001)                               # Small delay helps remove sporadic errors
-                time.sleep(0.001)
+                time.sleep(0.01)
 
                 # The printer will forward the received data
                 # we then collect the received data and compare it to identify transfer errors
@@ -223,6 +223,8 @@ class FileTransferThread(threading.Thread):
                     except usb.core.USBError as e:
                         if "timed out" in str(e.args):
                             pass
+                        else:
+                            break
 
                 bRet = bytearray(ret)                                   # convert the received data to bytes
                 if not bRet == buf:                                 # Compare the data received with data sent
