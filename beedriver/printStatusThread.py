@@ -40,14 +40,14 @@ class PrintStatusThread(threading.Thread):
         self._responseCallback = responseCallback
         self._beeConn = connection
         self._commands = connection.getCommandIntf()
-        self._running = True
+        self._active = True
 
         return
-    
+
     def run(self):
 
         printVars = dict()
-        while self._running:
+        while self._active:
 
             if self._beeConn.dummyPlugConnected():
                 # Simulated print job progress
@@ -64,20 +64,25 @@ class PrintStatusThread(threading.Thread):
             else:
                 printVars = self._commands.getPrintVariables()
 
-            if 'Lines' in printVars and \
-                'Executed Lines' in printVars and \
-                    printVars['Lines'] is not None and \
-                     printVars['Executed Lines'] >= printVars['Lines']:
+            if 'Lines' in printVars and 'Executed Lines' in printVars and printVars['Lines'] is not None and \
+                    printVars['Executed Lines'] >= printVars['Lines']:
                 # the print has finished
                 self._responseCallback(printVars)
                 break
 
             self._responseCallback(printVars)
-            time.sleep(5)
+            time.sleep(3)
 
     def stopStatusMonitor(self):
         """
         Forces the Status thread monitor to stop
         :return:
         """
-        self._running = False
+        self._active = False
+
+    def isRunning(self):
+        """
+        Returns true if the monitor is still running or false if not
+        :return:
+        """
+        return self.isAlive()

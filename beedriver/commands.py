@@ -78,6 +78,8 @@ class BeeCmd:
     startStatusMonitor()                                      Starts the print status monitor thread
     isHeating()                                               Returns True if heating is still in progress
     isTransferring()                                          Returns True if a file is being transfer
+    isPaused()                                                Returns True if the printer is in Pause state
+    isResuming()                                              Returns True if the printer is in Resuming state
     """
 
     MESSAGE_SIZE = 512
@@ -108,6 +110,7 @@ class BeeCmd:
         self._pausing = False
         self._paused = False
         self._shutdown = False
+        self._resuming = False
 
         self._inBootloader = False
         self._inFirmware = False
@@ -321,6 +324,39 @@ class BeeCmd:
         return False
 
     # *************************************************************************
+    #                            isPaused Method
+    # *************************************************************************
+    def isPaused(self):
+        r"""
+        isPaused method
+
+        return True if the printer is in Pause state or False if not
+        """
+        if self.isTransferring():
+            return False
+
+        status = self.getStatus()
+        if status is not None and status == 'Pause':
+            return True
+
+        return False
+
+    # *************************************************************************
+    #                            isResuming Method
+    # *************************************************************************
+    def isResuming(self):
+        r"""
+        isResuming method
+
+        return True if the printer is in Resuming state or False if not
+        """
+        self.getStatus()  # updates the status
+        if self._resuming:
+            return True
+
+        return False
+
+    # *************************************************************************
     #                            isShutdown Method
     # *************************************************************************
     def isShutdown(self):
@@ -388,6 +424,7 @@ class BeeCmd:
                 elif 's:5' in resp.lower():
                     status = 'SD_Print'
                     done = True
+                    self._resuming = False
                 elif 's:6' in resp.lower():
                     status = 'Transfer'
                     done = True
@@ -908,7 +945,7 @@ class BeeCmd:
     # *************************************************************************
     #                            repeatLastPrint Method
     # *************************************************************************
-    def repeatLastPrint(self,printTemperature=200):
+    def repeatLastPrint(self, printTemperature=200):
         r"""
         repeatLastPrint method
 
@@ -1142,17 +1179,22 @@ class BeeCmd:
         """
         logger.debug('Cancelling print...')
 
-        if (self.isTransferring() or self.isHeating())is True:
+        if (self.isTransferring() or self.isHeating()) is True:
             self.cancelTransfer()
             time.sleep(2)  # Waits for thread to stop transferring
             with self._commandLock:
                 self._beeCon.sendCmd("G28\n", "3")
             return True
 
+        # We must make sure the status monitor thread if finished before cancelling the print to avoid
+        # status updates even after the print was cancelled
+        self.stopStatusMonitor()
+        while self._statusThread.isRunning():
+            time.sleep(0.1)
+
         with self._commandLock:
             self._beeCon.sendCmd("M112\n", "3")
 
-        self.stopStatusMonitor()
         return True
 
     # *************************************************************************
@@ -1410,7 +1452,7 @@ class BeeCmd:
 
         with self._commandLock:
             self._pausing = True
-            self._beeCon.sendCmd('M640\n')
+            self._beeCon.sendCmd('M640\n', "3")
 
             self.stopStatusMonitor()
 
@@ -1436,6 +1478,7 @@ class BeeCmd:
             self._beeCon.sendCmd('M643\n')
             self._pausing = False
             self._shutdown = False
+            self._resuming = True
 
         return
     
@@ -1574,7 +1617,11 @@ class BeeCmd:
 
         Returns getNozzle Size int
         """
-        nozzle = 0.4
+        nozzle = 400
+        if self._beeCon.dummyPlugConnected():
+            nozzle = 600
+            return nozzle
+
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
             return None
