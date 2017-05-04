@@ -1306,12 +1306,15 @@ class BeeCmd:
         self._transfThread = transferThread.FileTransferThread(self._beeCon, fileName, 'Firmware', firmwareString)
         self._transfThread.start()
 
-        while self.getTransferCompletionState() is not None:
-            time.sleep(0.5)
+        self._transfThread.join()
 
+        if not self._transfThread.isTransferFirmwareSuccessful():
+            return False
+
+        # if the firmware file transfer was successful sets the firmware string
         self.setFirmwareString(firmwareString)
 
-        return
+        return True
     
     # *************************************************************************
     #                            transferSDFile Method

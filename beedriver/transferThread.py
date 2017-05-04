@@ -48,6 +48,7 @@ class FileTransferThread(threading.Thread):
     transferType = None
     optionalString = None
     temperature = 0
+    flashFirmwareSuccess = False
 
     transmissionErrors = 0
 
@@ -88,15 +89,12 @@ class FileTransferThread(threading.Thread):
     
     def run(self):
         
-        super(FileTransferThread, self).run()
+        # super(FileTransferThread, self).run()
         
         if self.transferType.lower() == 'firmware':
             self.transferring = True
             logger.info('Starting Firmware Transfer')
             self.transferFirmwareFile()
-
-            # Update Firmware String
-            self.beeCon.sendCmd('M114 A%s' % self.optionalString, 'ok')
             self.transferring = False
         
         elif self.transferType.lower() == 'gcode':
@@ -179,7 +177,19 @@ class FileTransferThread(threading.Thread):
         """
 
         return self.heating
-    
+
+    # *************************************************************************
+    #                        isTransferFirmwareSuccessful Method
+    # *************************************************************************
+    def isTransferFirmwareSuccessful(self):
+        r"""
+        isTransferFirmwareSuccessful method
+
+        Returns True if the transferring of the firmware file was successful
+        """
+
+        return self.flashFirmwareSuccess
+
     # *************************************************************************
     #                        transferFirmwareFile Method
     # *************************************************************************
@@ -190,28 +200,27 @@ class FileTransferThread(threading.Thread):
         Transfers Firmware File to printer
         """
         
-        cTime = time.time()                                         # Get current time
+        cTime = time.time()                                # Get current time
 
-        message = "M650 A" + str(self.fileSize) + "\n"                      # Prepare Start Transfer Command string
-        self.beeCon.write(message)                                         # Send Start Transfer Command
+        message = "M650 A" + str(self.fileSize) + "\n"     # Prepare Start Transfer Command string
+        self.beeCon.write(message)                         # Send Start Transfer Command
 
         # Before continue wait for the reply from the Start Command transfer
         resp = ''
-        while 'ok' not in resp:                                    # Once the printer is ready it replies 'ok'
+        while 'ok' not in resp:               # Once the printer is ready it replies 'ok'
             resp += self.beeCon.read()
 
-        resp = ''
-        with open(self.filePath, 'rb') as f:                             # Open file to start transfer
+        with open(self.filePath, 'rb') as f:  # Open file to start transfer
 
-            while True:                                             # while loop
-                buf = f.read(64)                                    # Read 64 bytes from file
+            while True:
+                buf = f.read(64)              # Read 64 bytes from file
 
                 if not buf:
-                    break                                   # if nothing left to read, transfer finished
+                    break                     # if nothing left to read, transfer finished
 
-                bytesWriten = self.beeCon.write(buf)                              # Send 64 bytes to the printer
+                self.beeCon.write(buf)        # Send 64 bytes to the printer
 
-                #time.sleep(0.0000001)                               # Small delay helps remove sporadic errors
+                # time.sleep(0.0000001)       # Small delay helps remove sporadic errors
                 time.sleep(0.01)
 
                 # The printer will forward the received data
@@ -226,14 +235,14 @@ class FileTransferThread(threading.Thread):
                         else:
                             break
 
-                bRet = bytearray(ret)                                   # convert the received data to bytes
-                if not bRet == buf:                                 # Compare the data received with data sent
-                                                                    # If data received/sent are different cancel transfer and reset the printer manually
+                bRet = bytearray(ret)  # convert the received data to bytes
+                if not bRet == buf:    # Compare the data received with data sent
+                                    # If data received/sent are different cancel transfer and reset the printer manually
                     logger.error('Firmware Flash error, please reset the printer')
-                    return
+                    return False
 
-                #sys.stdout.write('.')                               # print dot to console
-                #sys.stdout.flush()                                  # used only to provide a simple indication as the process in running
+                # sys.stdout.write('.')      # print dot to console
+                # sys.stdout.flush()         # used only to provide a simple indication as the process in running
                 self.bytesTransferred += len(buf)
 
         eTime = time.time()
@@ -245,7 +254,8 @@ class FileTransferThread(threading.Thread):
         
         self.bytesTransferred = 0
         self.fileSize = 0
-        
+
+        self.flashFirmwareSuccess = True
         return True
     
     # *************************************************************************
@@ -306,11 +316,11 @@ class FileTransferThread(threading.Thread):
             while blocksTransferred < nBlocks and not self.cancelTransfer:
 
                 startPos = self.bytesTransferred
-                #endPos = self.bytesTransferred + blockBytes
+                # endPos = self.bytesTransferred + blockBytes
 
-                #bytes2write = endPos - startPos
+                # bytes2write = endPos - startPos
 
-                #if blocksTransferred == (nBlocks-1):
+                # if blocksTransferred == (nBlocks-1):
                 #    endPos = self.fileSize
 
                 blockTransferred = False
@@ -325,7 +335,7 @@ class FileTransferThread(threading.Thread):
 
                 self.bytesTransferred += blockBytesTransferred
                 blocksTransferred += 1
-                #logger.info("transferGFile: Transferred %s / %s blocks %d / %d bytes",
+                # logger.info("transferGFile: Transferred %s / %s blocks %d / %d bytes",
                 #            str(blocksTransferred), str(nBlocks), endPos, self.fileSize)
 
         if self.cancelTransfer:
@@ -333,7 +343,7 @@ class FileTransferThread(threading.Thread):
             logger.info('multiBlockFileTransfer: %s / %s bytes transferred', str(self.bytesTransferred),str(self.fileSize))
             self.transferring = False
             beeCmd.cancelHeating()
-            #self.cancelTransfer = False
+            # self.cancelTransfer = False
             return
 
         logger.info("multiBlockFileTransfer: Transfer completed. Errors Resolved: %s", str(beeCmd.transmissionErrors))
@@ -369,7 +379,7 @@ class FileTransferThread(threading.Thread):
 
         endPos = startPos + len(block2write)
 
-        #self.StartTransfer(endPos,startPos)
+        # self.StartTransfer(endPos,startPos)
         self.beeCon.write("M28 D" + str(endPos - 1) + " A" + str(startPos) + "\n")
 
         nMsg = int(math.ceil(float(len(block2write))/float(self.MESSAGE_SIZE)))
@@ -383,8 +393,8 @@ class FileTransferThread(threading.Thread):
         resp = self.beeCon.read()
         while "ok q:0" not in resp.lower():
             resp += self.beeCon.read()
-        #print(resp)
-        #resp = self.beeCon.read(10) #force clear buffer
+        # print(resp)
+        # resp = self.beeCon.read(10) #force clear buffer
 
         for m in msgBuf:
             mResp = self.sendBlockMsg(m)
@@ -411,7 +421,7 @@ class FileTransferThread(threading.Thread):
             None if an error occurred and could not reestablish communication with printer
         """
 
-        #resp = self.beeCon.dispatch(msg)
+        # resp = self.beeCon.dispatch(msg)
         msgLen = len(msg)
         bWriten = self.beeCon.write(msg)
         if msgLen != bWriten:
