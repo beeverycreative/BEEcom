@@ -143,6 +143,20 @@ class FileTransferThread(threading.Thread):
             return None
 
     # *************************************************************************
+    #                        getTransferCompletion Method
+    # *************************************************************************
+    def getTransferCompletion(self):
+        r"""
+        getTransferCompletion
+
+        Returns current file transfer progress in decimal percentage (float 0.00 - 1.00)
+        """
+        if self.fileSize > 0:
+            return float(self.bytesTransferred) / float(self.fileSize)
+        else:
+            return 0.0
+
+    # *************************************************************************
     #                        cancelFileTransfer Method
     # *************************************************************************
     def cancelFileTransfer(self):

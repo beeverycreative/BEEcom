@@ -48,7 +48,8 @@ class BeeCmd:
     load()                                                    Performs load filament operation
     unload()                                                  Performs unload operation
     startHeating(t,extruder)                                  Starts Heating procedure
-    getHeatingState()                                         Returns the heating state
+    getHeatingState()                                         Returns the current heating state progress
+    getTransferState()                                        Returns the transfer progress, if any is running
     cancelHeating()                                           Cancels Heating
     goToHeatPos()                                             Moves the printer to the heating coordinates
     goToRestPos()                                             Moves the printer to the rest position
@@ -745,7 +746,7 @@ class BeeCmd:
         r"""
         getHeatingState method
 
-        Returns the heating state
+        Returns the heating state in decimal percentage (float: 0.00 - 1.00)
         """
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
@@ -754,9 +755,27 @@ class BeeCmd:
         currentT = self.getNozzleTemperature()
 
         if self._setPointTemperature > 0:
-            return 100 * currentT/self._setPointTemperature
+            temp = currentT / self._setPointTemperature
+            if temp > 1:  # protects against cases where the temperature overshoots the target
+                return 1.0
+            else:
+                return temp
         else:
-            return 100
+            return 0.0
+
+    # *************************************************************************
+    #                            getTransferState Method
+    # *************************************************************************
+    def getTransferState(self):
+        r"""
+        getTransferState method
+
+        Returns the transfer file progress in decimal percentage (float: 0.00 - 1.00)
+        """
+        if self.isTransferring():
+            return self._transfThread.getTransferCompletion()
+
+        return 0.0
     
     # *************************************************************************
     #                            cancelHeating Method
@@ -1622,7 +1641,7 @@ class BeeCmd:
         """
         nozzle = 400
         if self._beeCon.dummyPlugConnected():
-            nozzle = 600
+            nozzle = 400
             return nozzle
 
         if self.isTransferring():
