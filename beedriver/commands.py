@@ -1442,6 +1442,7 @@ class BeeCmd:
 
         with self._commandLock:
             resp = self._beeCon.sendCmd('M115\n', 'ok')
+            resp = resp.replace('N:0', '')
             resp = resp.replace(' ', '')
 
             split = resp.split('ok')
