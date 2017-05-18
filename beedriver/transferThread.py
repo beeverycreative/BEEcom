@@ -235,12 +235,13 @@ class FileTransferThread(threading.Thread):
                 self.beeCon.write(buf)        # Send 64 bytes to the printer
 
                 # time.sleep(0.0000001)       # Small delay helps remove sporadic errors
-                time.sleep(0.01)
+                #time.sleep(0.01)
+
 
                 # The printer will forward the received data
                 # we then collect the received data and compare it to identify transfer errors
                 ret = []
-                while len(ret) != len(buf):                        # wait for the 64 bytes to be received
+                while len(ret) < len(buf):                        # wait for the 64 bytes to be received
                     try:
                         ret += self.beeCon.ep_in.read(len(buf), 1000)
                     except usb.core.USBError as e:
@@ -252,8 +253,9 @@ class FileTransferThread(threading.Thread):
                 bRet = bytearray(ret)  # convert the received data to bytes
                 if not bRet == buf:    # Compare the data received with data sent
                                     # If data received/sent are different cancel transfer and reset the printer manually
-                    logger.error('Firmware Flash error, please reset the printer')
-                    return False
+                    if not any(buf == bRet[i:len(buf) + i] for i in xrange(len(bRet) - len(buf) + 1)):
+                        logger.error('Firmware Flash error, please reset the printer')
+                        return False
 
                 # sys.stdout.write('.')      # print dot to console
                 # sys.stdout.flush()         # used only to provide a simple indication as the process in running
@@ -452,6 +454,7 @@ class FileTransferThread(threading.Thread):
                 tries -= 1
             except Exception as ex:
                 logger.error(str(ex))
+                logger.error("resp: {}".format(resp))
                 tries = -1
 
         if tries > 0:
