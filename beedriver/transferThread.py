@@ -235,8 +235,6 @@ class FileTransferThread(threading.Thread):
                 self.beeCon.write(buf)        # Send 64 bytes to the printer
 
                 # time.sleep(0.0000001)       # Small delay helps remove sporadic errors
-                #time.sleep(0.01)
-
 
                 # The printer will forward the received data
                 # we then collect the received data and compare it to identify transfer errors
