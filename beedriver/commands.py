@@ -1208,8 +1208,9 @@ class BeeCmd:
         # We must make sure the status monitor thread if finished before cancelling the print to avoid
         # status updates even after the print was cancelled
         self.stopStatusMonitor()
-        while self._statusThread.isRunning():
-            time.sleep(0.1)
+        if self._statusThread is not None:
+            while self._statusThread.isRunning():
+                time.sleep(0.1)
 
         with self._commandLock:
             self._beeCon.sendCmd("M112\n", "3")
