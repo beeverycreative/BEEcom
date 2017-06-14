@@ -45,6 +45,7 @@ class BeeCmd:
     goToNextCalibrationPoint()                                Moves to next calibration point.
     getNozzleTemperature()                                    Returns current nozzle temperature
     setNozzleTemperature(t)                                   Sets nozzle target temperature
+    getTargetTemperature()                                    Return the target temperature                                        
     load()                                                    Performs load filament operation
     unload()                                                  Performs unload operation
     startHeating(t,extruder)                                  Starts Heating procedure
@@ -685,6 +686,34 @@ class BeeCmd:
             self._beeCon.sendCmd(commandStr)
 
             return
+
+    # *************************************************************************
+    #                        getTargetTemperature Method
+    # *************************************************************************
+    def getTargetTemperature(self):
+        r"""
+        getTargetTemperature method
+
+        Gets nozzle target temperature
+
+        """
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        with self._commandLock:
+            # get Target Temperature
+            resp=self._beeCon.sendCmd("M1029 \n" )
+
+            try:
+                splits = resp.split(" ")
+                tStr=splits[0]
+                t=float(tStr[tStr.find("/") + 1:tStr.find("(")])
+                return t
+            except Exception as ex:
+                logger.error("Error getting nozzle temperature: %s", str(ex))
+
+            return 0
 
     # *************************************************************************
     #                            load Method
