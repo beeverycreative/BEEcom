@@ -701,14 +701,17 @@ class BeeCmd:
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
             return None
 
+        if self._beeCon.dummyPlugConnected():
+            return 200.0
+
         with self._commandLock:
             # get Target Temperature
-            resp=self._beeCon.sendCmd("M1029 \n" )
+            resp = self._beeCon.sendCmd("M1029 \n")
 
             try:
                 splits = resp.split(" ")
-                tStr=splits[0]
-                t=float(tStr[tStr.find("/") + 1:tStr.find("(")])
+                tStr = splits[0]
+                t = float(tStr[tStr.find("/") + 1:tStr.find("(")])
                 return t
             except Exception as ex:
                 logger.error("Error getting nozzle temperature: %s", str(ex))
