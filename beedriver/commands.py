@@ -539,7 +539,7 @@ class BeeCmd:
             return None
 
         with self._commandLock:
-            resp = self._beeCon.sendCmd("G91\n")
+            self._beeCon.sendCmd("G91\n")
 
             newX = 0
             newY = 0
@@ -564,9 +564,9 @@ class BeeCmd:
                              + " Z" + str(newZ) + " E" + str(newE) + "\n"
 
             if wait is not None:
-                self._beeCon.sendCmd(commandStr)
+                self._beeCon.sendCmd(commandStr, wait)
             else:
-                self._beeCon.sendCmd(commandStr, "3")
+                self._beeCon.sendCmd(commandStr)
                 
             self._beeCon.sendCmd("G90\n")
 

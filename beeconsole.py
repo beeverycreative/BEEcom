@@ -81,7 +81,7 @@ class Console:
     # *************************************************************************
     #                            Init Method
     # *************************************************************************
-    def __init__(self, findAll = False):
+    def __init__(self, findAll=False):
 
         self.connected = False
         self.exit = False
@@ -101,7 +101,7 @@ class Console:
                 # Connect to first Printers
                 #findAll = True
                 if findAll:
-                    printerlist = self.beeConn.getPrinterList();
+                    printerlist = self.beeConn.getPrinterList()
                     if len(printerlist) > 1:
                         print("Choose printer from list:")
                         i = 0
@@ -274,7 +274,7 @@ def restart_program():
 # *************************************************************************
 #                            main Method
 # *************************************************************************
-def main(findAll = False):
+def main(findAll=False):
     finished = False
 
     console = Console(findAll)
@@ -410,13 +410,12 @@ def main(findAll = False):
 
             printerFile = str(args[1])
 
-            lFile = open(local_file,'w')
+            lFile = open(local_file, 'w')
 
             done = False
-            reply = ""
 
-            reply = console.beeCmd.sendCmd("M21\n")
-            reply = console.beeCmd.sendCmd("M23 {}\n".format(printerFile))
+            console.beeCmd.sendCmd("M21\n")
+            console.beeCmd.sendCmd("M23 {}\n".format(printerFile))
             reply = console.beeCmd.sendCmd("M34\n")
 
             start = time.time()
@@ -434,8 +433,6 @@ def main(findAll = False):
 
                 lFile.write(reply)
             lFile.close()
-
-
 
         elif "-verify" in var.lower():
             logger.info("Newest Printer Firmware Available: %s", newestFirmwareVersion)
