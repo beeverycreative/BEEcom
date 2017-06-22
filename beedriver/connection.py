@@ -196,8 +196,12 @@ class Conn:
         assert self.ep_in is not None
         
         self.dev = self.ep_out.device
-        self.dev.set_configuration()
-        self.dev.reset()
+        try:
+            self.dev.set_configuration()
+            self.dev.reset()
+        except usb.core.USBError as usb_exception:
+            self._handleUSBException(usb_exception, "USB exception while connecting to printer: %s")
+
         time.sleep(0.5)
         #self.dev.set_configuration()
         self.cfg = self.dev.get_active_configuration()
@@ -296,10 +300,8 @@ class Conn:
             else:
                 try:
                     bytes_written = self.ep_out.write(message, timeout)
-                except usb.core.USBError as e:
-                    logger.error("USB write data exception: %s", str(e))
-                except Exception as ex:
-                    logger.error("Write error - Connection lost: " + str(ex))
+                except usb.core.USBError as usb_exception:
+                    self._handleUSBException(usb_exception, "USB write data exception: %s")
 
         return bytes_written
 
@@ -329,10 +331,8 @@ class Conn:
                 self.write("")
                 ret = self.ep_in.read(readLen, timeout)
                 resp = ''.join([chr(x) for x in ret])
-            except usb.core.USBError as e:
-                logger.error("USB read data exception: %s", str(e))
-            except Exception as ex:
-                logger.error("Read error - Connection lost: " + str(ex))
+            except usb.core.USBError as usb_exception:
+                self._handleUSBException(usb_exception, "USB read data exception: %s")
 
         return resp
 
@@ -363,19 +363,15 @@ class Conn:
                 self.ep_out.write(message)
                 time.sleep(0.009)
 
-            except usb.core.USBError as e:
-                logger.error("USB dispatch (write) data exception: %s", str(e))
-            except Exception as ex:
-                logger.error("Dispatch write error - Connection lost: " + str(ex))
+            except usb.core.USBError as usb_exception:
+                self._handleUSBException(usb_exception, "USB dispatch (write) data exception")
 
             try:
                 ret = self.ep_in.read(Conn.DEFAULT_READ_LENGTH, timeout)
                 resp = ''.join([chr(x) for x in ret])
 
-            except usb.core.USBError as e:
-                logger.error("USB dispatch (read) data exception: %s", str(e))
-            except Exception as ex:
-                logger.error("Dispatch read error - Connection lost: " + str(ex))
+            except usb.core.USBError as usb_exception:
+                self._handleUSBException(usb_exception, "USB dispatch (read) data exception")
 
         return resp
 
@@ -512,22 +508,19 @@ class Conn:
         r"""
         Closes active connection with printer
         """
-        if self.ep_out is not None:
-            with self._connectionLock:
-                try:
-                    # release the device
-                    usb.util.dispose_resources(self.dev)
-                    self.ep_out = None
-                    self.ep_in = None
-                    self.intf = None
-                    self.cfg = None
-                    #usb.util.release_interface(self.dev, self.intf)    #not needed after dispose
+        try:
+            if self.ep_out is not None:
+                # release the device
+                usb.util.dispose_resources(self.dev)
+                self.ep_out = None
+                self.ep_in = None
+                self.intf = None
+                self.cfg = None
+                #usb.util.release_interface(self.dev, self.intf)    #not needed after dispose
 
-                    self.connected = False
-                except usb.core.USBError as e:
-                    logger.error("USB exception while closing connection to printer: %s", str(e))
-                except Exception as ex:
-                    logger.error("Close connection error - Connection lost: " + str(ex))
+                self.connected = False
+        except usb.core.USBError as e:
+            logger.error("USB exception while closing connection to printer: %s", str(e))
 
         return
 
@@ -641,6 +634,20 @@ class Conn:
         Gets the dummyPlug flag variable
         """
         return self._dummyPlug
+
+    def _handleUSBException(self, exception, loggerMsg):
+        """
+        Handles any special case for USB exceptions from libusb
+        :param exception:
+        :param loggerMsg:
+        :return:
+        """
+        libusbMsg = str(exception)
+        logger.error("%s: %s", loggerMsg, libusbMsg)
+        if "No such device" in libusbMsg and self.connected is True:
+            self._monitorConnection = False
+            self._disconnectCallback()
+            self.connected = False
 
     def _connectionMonitorThread(self):
         """
