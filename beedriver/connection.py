@@ -581,7 +581,7 @@ class Conn:
         
         SN = str(self.connectedPrinter['Serial Number'])
         self.close()
-        time.sleep(3)
+        time.sleep(0.5)
         self.getPrinterList()
         self.connectToPrinterWithSN(SN)
         
