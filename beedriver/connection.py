@@ -649,6 +649,8 @@ class Conn:
             self._disconnectCallback()
             self.connected = False
 
+        raise exception
+
     def _connectionMonitorThread(self):
         """
         Monitor thread to check if the connection to the printer is still active
