@@ -443,7 +443,11 @@ class Conn:
             self.write(cmd)
 
             while s not in resp:
-                resp += self.read()
+                try:
+                    resp += self.read()
+                except Exception as ex:
+                    logger.error("Exception while waiting for response from printer: %s", str(ex))
+                    return resp
 
                 # Checks timeout
                 if timeout is not None:
@@ -483,7 +487,11 @@ class Conn:
 
             while "ok" not in resp:
 
-                resp += self.read()
+                try:
+                    resp += self.read()
+                except Exception as ex:
+                    logger.error("Exception while waiting for ok response from printer: %s", str(ex))
+                    return resp
 
                 # Checks timeout
                 if timeout is not None:
@@ -498,6 +506,7 @@ class Conn:
                     resp += self.read()
                 except Exception as ex:
                     logger.error("Exception while waiting for %s response: %s", str2find, str(ex))
+                    break
 
         return resp
 
@@ -644,12 +653,12 @@ class Conn:
         """
         libusbMsg = str(exception)
         logger.error("%s: %s", loggerMsg, libusbMsg)
-        if "No such device" in libusbMsg and self.connected is True:
-            self._monitorConnection = False
-            self._disconnectCallback()
-            self.connected = False
 
-        raise exception
+        if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
+            self._monitorConnection = False
+            if self._disconnectCallback is not None:
+                self._disconnectCallback()
+            self.connected = False
 
     def _connectionMonitorThread(self):
         """
