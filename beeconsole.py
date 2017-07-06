@@ -464,6 +464,14 @@ def main(findAll=False):
                 #newFwCmd = 'M114 A' + newestFirmwareVersion  # prepare command string to set Firmware String
                 #console.beeCmd.sendCmd(newFwCmd, printReply=False)  # Record New FW String in Bootloader
             # console.FlashFirmware(var)
+
+
+        elif "-setsn" in var.lower():
+            splits = var.lower().split(" ")
+            sn = splits[1]
+            console.beeCmd.setSerialNumber(sn)
+
+
         else:
             if "m630" in var.lower():
                 console.beeCmd.goToFirmware()

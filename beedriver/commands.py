@@ -6,6 +6,7 @@ import time
 from beedriver import logger, printStatusThread
 from beedriver import transferThread
 import platform
+import re
 
 # Copyright (c) 2015 BEEVC - Electronic Systems This file is part of BEESOFT
 # software: you can redistribute it and/or modify it under the terms of the GNU
@@ -82,6 +83,10 @@ class BeeCmd:
     isTransferring()                                          Returns True if a file is being transfer
     isPaused()                                                Returns True if the printer is in Pause state
     isResuming()                                              Returns True if the printer is in Resuming state
+    setSerialNumber()                                         Defines printer serial number
+    getTemperatures()                                         Returns printer temperatures dict
+    getElectronicsTemperature()                               Returns printer electronics temperature
+    getExtruderBlockTemperature()                             Returns extruder block temperature
     """
 
     MESSAGE_SIZE = 512
@@ -1738,3 +1743,86 @@ class BeeCmd:
             except Exception as ex:
                 # in case of communication error returns a negative value signal to signal the error
                 return -1.0
+
+    # *************************************************************************
+    #                            setSerialNumber Method
+    # *************************************************************************
+    def setSerialNumber(self,sn):
+        r"""
+        setSerialNumber method
+        :param sn: serial number
+        :return: None
+        """
+
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        with self._commandLock:
+            self._beeCon.sendCmd('M118 T{}'.format(sn))
+
+    # *************************************************************************
+    #                            getTemperatures Method
+    # *************************************************************************
+    def getTemperatures(self):
+        r"""
+        getTemperatures method
+        :return: temperatures dict
+        """
+
+        with self._commandLock:
+            tStr = self._beeCon.sendCmd('M105')
+
+        re1 = '(T)'  # Variable Name 1
+        re2 = '.*?'  # Non-greedy match on filler
+        re3 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 1
+        re4 = '.*?'  # Non-greedy match on filler
+        re5 = '(B)'  # Variable Name 2
+        re6 = '.*?'  # Non-greedy match on filler
+        re7 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 2
+        re8 = '.*?'  # Non-greedy match on filler
+        re9 = '(R)'  # Variable Name 3
+        re10 = '.*?'  # Non-greedy match on filler
+        re11 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 3
+
+        rg = re.compile(re1 + re2 + re3 + re4 + re5 + re6 + re7 + re8 + re9 + re10 + re11, re.IGNORECASE | re.DOTALL)
+        m = rg.search(tStr)
+        temperatures = {}
+        if m:
+            var1 = m.group(1)
+            float1 = m.group(2)
+            var2 = m.group(3)
+            float2 = m.group(4)
+            var3 = m.group(5)
+            float3 = m.group(6)
+            temperatures['Nozzle'] = float1
+            temperatures['Block'] = float2
+            temperatures['Electronics'] = float3
+
+        return temperatures
+
+    # *************************************************************************
+    #                            getElectronicsTemperature Method
+    # *************************************************************************
+    def getElectronicsTemperature(self):
+        r"""
+        getElectronicsTemperature method
+        :return: electronics temperature
+        """
+
+        t = self.getTemperatures()
+
+        return t['Electronics']
+
+    # *************************************************************************
+    #                            getExtruderBlockTemperature Method
+    # *************************************************************************
+    def getExtruderBlockTemperature(self):
+        r"""
+        getExtruderBlockTemperature method
+        :return: blocks temperature
+        """
+
+        t = self.getTemperatures()
+
+        return t['Block']
