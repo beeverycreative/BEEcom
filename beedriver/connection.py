@@ -182,7 +182,7 @@ class Conn:
         """
 
         self.connectedPrinter = selectedPrinter
-        logger.info('\n...Connecting to %s with serial number %s', str(selectedPrinter['Product']), str(selectedPrinter['Serial Number']))
+        logger.info('...Connecting to %s with serial number %s', str(selectedPrinter['Product']), str(selectedPrinter['Serial Number']))
 
         if self._dummyPlug is True:
             self.connected = True
@@ -652,7 +652,11 @@ class Conn:
         :return:
         """
         libusbMsg = str(exception)
-        logger.error("%s: %s", loggerMsg, libusbMsg)
+
+        if "Operation timed out" in libusbMsg:
+            logger.debug(loggerMsg % libusbMsg)
+        else:
+            logger.error(loggerMsg % libusbMsg)
 
         if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
             self._monitorConnection = False

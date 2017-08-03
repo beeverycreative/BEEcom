@@ -391,11 +391,16 @@ class BeeCmd:
         returns the current status of the printer
         """
         mode = self.getPrinterMode()
+
+        # In dummy printer mode sets mode to firmware
+        if mode is None and self._beeCon.dummyPlugConnected():
+            mode = 'Firmware'
+
         if mode == 'Bootloader':
             logger.info('Printer in Bootloader mode')
             return 'Bootloader'
         if mode is None or (mode != 'Firmware' and mode != 'Bootloader'):
-            logger.warning('GetStatus: can only get status in firmware')
+            logger.debug('GetStatus: can only get status in firmware')
             return None
 
         if self.isTransferring():

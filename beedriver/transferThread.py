@@ -112,7 +112,7 @@ class FileTransferThread(threading.Thread):
 
                 logger.info('Starting GCode Transfer')
                 self.multiBlockFileTransfer()
-                logger.info('File Transfer Finished... Heating...\n')
+                logger.info('File Transfer Finished. Heating...')
 
                 self.beeCon.setMonitorConnection(True)
                 self.transferring = False
@@ -515,7 +515,7 @@ class FileTransferThread(threading.Thread):
                 nameChars[0] = 'a'
                 sdFileName = "".join(nameChars)
         
-        logger.info('Heating Done... Beginning print\n')
+        logger.info('Heating Done. Beginning print...')
         self.beeCon.sendCmd('M33 %s\n' % sdFileName)
 
         return
