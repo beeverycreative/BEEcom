@@ -200,7 +200,7 @@ class Conn:
             self.dev.set_configuration()
             self.dev.reset()
         except usb.core.USBError as usb_exception:
-            self._handleUSBException(usb_exception, "USB exception while connecting to printer: %s")
+            self._handleUSBException(usb_exception, "USB exception while connecting to printer")
 
         time.sleep(0.5)
         #self.dev.set_configuration()
@@ -301,7 +301,7 @@ class Conn:
                 try:
                     bytes_written = self.ep_out.write(message, timeout)
                 except usb.core.USBError as usb_exception:
-                    self._handleUSBException(usb_exception, "USB write data exception: %s")
+                    self._handleUSBException(usb_exception, "USB write data exception")
 
         return bytes_written
 
@@ -332,7 +332,7 @@ class Conn:
                 ret = self.ep_in.read(readLen, timeout)
                 resp = ''.join([chr(x) for x in ret])
             except usb.core.USBError as usb_exception:
-                self._handleUSBException(usb_exception, "USB read data exception: %s")
+                self._handleUSBException(usb_exception, "USB read data exception")
 
         return resp
 
@@ -654,9 +654,9 @@ class Conn:
         libusbMsg = str(exception)
 
         if "Operation timed out" in libusbMsg:
-            logger.debug(loggerMsg % libusbMsg)
+            logger.debug(loggerMsg + ": " + libusbMsg)
         else:
-            logger.error(loggerMsg % libusbMsg)
+            logger.error(loggerMsg + ": " + libusbMsg)
 
         if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
             self._monitorConnection = False
