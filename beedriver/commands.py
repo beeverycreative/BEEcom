@@ -357,6 +357,10 @@ class BeeCmd:
 
         return True if the printer is in Resuming state or False if not
         """
+        if self._beeCon.dummyPlugConnected():
+            time.sleep(3)
+            return False
+
         self.getStatus()  # updates the status
         if self._resuming:
             return True
