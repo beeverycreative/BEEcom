@@ -122,8 +122,8 @@ class Conn:
                     dev_list.append(dev)
             except Exception as ex:  # If any problems occurs in USB connection, enters to dummyplug mode
                 print 'BEEcom FATAL Error when trying to connect to USB interface: ' + ex.message
-                print 'Check that you have libusb correctly installed. Changing to dummy plug mode...'
-                self._dummyPlug = True
+                print 'Check that you have libusb correctly installed.'
+                pass
 
         if self._dummyPlug is True:
             # creates a dummy interface
