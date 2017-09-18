@@ -62,7 +62,7 @@ class FileTransferThread(threading.Thread):
     # *************************************************************************
     #                        __init__ Method
     # *************************************************************************
-    def __init__(self, connection, filePath, transferType, optionalString=None, temperature=None):
+    def __init__(self, connection, filePath, transferType, optionalString=None, temperature=None, header=None):
         r"""
         __init__ Method
 
@@ -78,6 +78,7 @@ class FileTransferThread(threading.Thread):
         self.optionalString = optionalString
         self.cancelTransfer = False
         self.temperature = temperature
+        self.header = header
 
         if temperature is not None:
             self.heating = True
@@ -281,6 +282,8 @@ class FileTransferThread(threading.Thread):
         
         Transfers Gcode File using multi block transfers
         """
+
+        offset = 0
         
         # Get commands interface
         beeCmd = self.beeCon.getCommandIntf()
@@ -316,6 +319,13 @@ class FileTransferThread(threading.Thread):
         if not resp:
             return
 
+        # Send gcode header text
+        if self.header is not None:
+            offset = len(self.header)
+            self.sendHeader(self.header)
+        else:
+            offset = 0
+
         # Start transfer
         blocksTransferred = 0
         self.bytesTransferred = 0
@@ -329,7 +339,7 @@ class FileTransferThread(threading.Thread):
 
             while blocksTransferred < nBlocks and not self.cancelTransfer:
 
-                startPos = self.bytesTransferred
+                startPos = self.bytesTransferred + offset
                 # endPos = self.bytesTransferred + blockBytes
 
                 # bytes2write = endPos - startPos
@@ -368,6 +378,42 @@ class FileTransferThread(threading.Thread):
         logger.info("multiBlockFileTransfer: Average Transfer Speed: %.2f bytes/second", avgSpeed)
 
         return
+
+    # *************************************************************************
+    #                        sendHeader Method
+    # *************************************************************************
+
+    def sendHeader(self, text):
+        r"""
+            sendHeader method
+
+            writes the header of the gcode file
+
+            arguments:
+                text - header text
+
+            returns:
+                True if header transferred successfully
+                False if an error occurred and communication was reestablished
+                None if an error occurred and could not reestablish communication with printer
+
+            Note: Header must be shorter than 512 bytes
+            """
+
+
+        endPos = len(text)
+
+        self.beeCon.write("M28 D" + str(endPos - 1) + " A0\n")
+
+        resp = self.beeCon.read()
+        while "ok q:0" not in resp.lower():
+            resp += self.beeCon.read()
+
+        mResp = self.sendBlockMsg(text)
+        if mResp is not True:
+            return mResp
+
+        return len(text)
     
     # *************************************************************************
     #                        sendBlock Method
