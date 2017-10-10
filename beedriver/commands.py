@@ -87,6 +87,7 @@ class BeeCmd:
     getTemperatures()                                         Returns printer temperatures dict
     getElectronicsTemperature()                               Returns printer electronics temperature
     getExtruderBlockTemperature()                             Returns extruder block temperature
+    getCurrentPrintFilename()                                 Returns the name of the file currently being printed
     """
 
     MESSAGE_SIZE = 512
@@ -966,14 +967,16 @@ class BeeCmd:
     # *************************************************************************
     #                            printFile Method
     # *************************************************************************
-    def printFile(self, filePath, printTemperature=200, sdFileName=None):
+    def printFile(self, filePath, printTemperature=200, estimatedPrintTime=None, gcodeLines=None, sdFileName=None):
         r"""
-        printFile method
-        
         Transfers a file to the printer and starts printing
-        
-        returns True if print starts successfully
-        
+
+        :param filePath: Complete Path to the gcode file in the filesystem
+        :param printTemperature: Target temperature for the selected filament
+        :param estimatedPrintTime: Estimated print time in seconds (given by the estimator tool)
+        :param gcodeLines: Number of lines of the gcode file to print (given by the estimator tool)
+        :param sdFileName: Optional name of the SD file where the gcode will be stored in the printer (limited to 8 characters)
+        :return: True if print starts successfully
         """
         if self.isTransferring():
             logger.error('File Transfer Thread active, please wait for transfer thread to end')
@@ -990,7 +993,7 @@ class BeeCmd:
 
             if printTemperature is not None:
                 #self.home()
-                self.startHeating(printTemperature+5)
+                self.startHeating(printTemperature + 5)
 
             time.sleep(1)
 
@@ -998,7 +1001,8 @@ class BeeCmd:
                 self._beeCon.read()
 
                 self._transfThread = transferThread.FileTransferThread(
-                    self._beeCon, filePath, 'print', sdFileName, printTemperature)
+                    self._beeCon, filePath, 'print', sdFileName, printTemperature,
+                     BeeCmd.generatePrintInfoHeader(filePath, estimatedPrintTime, gcodeLines))
                 self._transfThread.start()
 
         except Exception as ex:
@@ -1835,3 +1839,64 @@ class BeeCmd:
         t = self.getTemperatures()
 
         return t['Block']
+
+    # *************************************************************************
+    #                            getCurrentPrintFilename Method
+    # *************************************************************************
+    def getCurrentPrintFilename(self):
+        r"""
+        getCurrentPrintFilename method
+        :return: string with the filename stored in the printer
+        """
+        if self._beeCon.dummyPlugConnected():
+            return "virtual-print-file.gco"
+
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        filename = ''
+        with self._commandLock:
+            try:
+                replyStr = self._beeCon.sendCmd('M1034\n', 'ok')
+                replyStrParts = replyStr.split('\n')
+
+                if len(replyStrParts) > 1:
+                    filename = replyStrParts[0].replace('\'', '')
+
+                return filename
+            except Exception as ex:
+                # in case of communication error returns None
+                logger.error(ex)
+                return None
+
+    @staticmethod
+    def generatePrintInfoHeader(filePath, estimatedPrintTime, gcodeLines):
+        """
+        Auxiliary method to generate the header string that will be sent to the printer when the print job begins
+
+        :filePath           complete path to the file being printed
+        :estimatedPrintTime estimated print time (seconds)
+        :gcodeLines         number of real gcode lines the file has
+        """
+        if estimatedPrintTime is None:
+            return None
+
+        header = "M31 A"
+        estTimeMin = int(estimatedPrintTime / 60)  # converted to minutes
+        header = header + str(estTimeMin)
+
+        if gcodeLines is not None and gcodeLines > 0:
+            header = header + " L" + gcodeLines
+
+        # Extracts the filename from the complete file path
+        import ntpath
+        if filePath is None:
+            return header
+
+        path, filename = ntpath.split(filePath)
+
+        header = header + "\n"
+        header = header + "M1033 " + filename
+
+        return header
