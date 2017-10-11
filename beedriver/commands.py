@@ -1887,7 +1887,7 @@ class BeeCmd:
         header = header + str(estTimeMin)
 
         if gcodeLines is not None and gcodeLines > 0:
-            header = header + " L" + gcodeLines
+            header = header + " L" + str(gcodeLines)
 
         # Extracts the filename from the complete file path
         import ntpath
