@@ -1892,11 +1892,12 @@ class BeeCmd:
         # Extracts the filename from the complete file path
         import ntpath
         if filePath is None:
+            header = header + "\n"
             return header
 
         path, filename = ntpath.split(filePath)
 
+        header = header + "\nM1033 " + filename
         header = header + "\n"
-        header = header + "M1033 " + filename
 
         return header

@@ -339,7 +339,7 @@ class FileTransferThread(threading.Thread):
 
             while blocksTransferred < nBlocks and not self.cancelTransfer:
 
-                startPos = self.bytesTransferred + offset
+                startPos = self.bytesTransferred
                 # endPos = self.bytesTransferred + blockBytes
 
                 # bytes2write = endPos - startPos
@@ -350,7 +350,7 @@ class FileTransferThread(threading.Thread):
                 blockTransferred = False
                 while blockTransferred is False:
 
-                    blockBytesTransferred = self.sendBlock(startPos, f)
+                    blockBytesTransferred = self.sendBlock(startPos, f, offset)
                     if blockBytesTransferred is None:
                         logger.info("transferGFile: Transfer aborted")
                         return False
@@ -385,22 +385,20 @@ class FileTransferThread(threading.Thread):
 
     def sendHeader(self, text):
         r"""
-            sendHeader method
+        sendHeader method
 
-            writes the header of the gcode file
+        writes the header of the gcode file
 
-            arguments:
-                text - header text
+        arguments:
+            text - header text
 
-            returns:
-                True if header transferred successfully
-                False if an error occurred and communication was reestablished
-                None if an error occurred and could not reestablish communication with printer
+        returns:
+            True if header transferred successfully
+            False if an error occurred and communication was reestablished
+            None if an error occurred and could not reestablish communication with printer
 
-            Note: Header must be shorter than 512 bytes
-            """
-
-
+        Note: Header must be shorter than 512 bytes
+        """
         endPos = len(text)
 
         self.beeCon.write("M28 D" + str(endPos - 1) + " A0\n")
@@ -418,7 +416,7 @@ class FileTransferThread(threading.Thread):
     # *************************************************************************
     #                        sendBlock Method
     # *************************************************************************
-    def sendBlock(self, startPos, fileObj):
+    def sendBlock(self, startPos, fileObj, writeOffset=0):
         r"""
         sendBlock method
 
@@ -427,6 +425,7 @@ class FileTransferThread(threading.Thread):
         arguments:
             startPos - starting position of block
             fileObj - file object with file to write
+            writeOffset  - possible offset caused by header
 
         returns:
             True if block transferred successfully
@@ -435,9 +434,13 @@ class FileTransferThread(threading.Thread):
         """
 
         fileObj.seek(startPos)
-        block2write = fileObj.read(self.MESSAGE_SIZE*self.BLOCK_SIZE)
+        block2write = fileObj.read(self.MESSAGE_SIZE * self.BLOCK_SIZE)
 
         endPos = startPos + len(block2write)
+
+        if writeOffset > 0:
+            startPos = startPos + writeOffset
+            endPos = endPos + writeOffset
 
         # self.StartTransfer(endPos,startPos)
         self.beeCon.write("M28 D" + str(endPos - 1) + " A" + str(startPos) + "\n")
