@@ -88,6 +88,8 @@ class BeeCmd:
     getElectronicsTemperature()                               Returns printer electronics temperature
     getExtruderBlockTemperature()                             Returns extruder block temperature
     getCurrentPrintFilename()                                 Returns the name of the file currently being printed
+    getExtruderStepsMM()                                      Returns Extruder steps per mm
+    setExtruderStepsMM()                                      Defines Extruder Steps per mm
     """
 
     MESSAGE_SIZE = 512
@@ -1869,6 +1871,73 @@ class BeeCmd:
                 # in case of communication error returns None
                 logger.error(ex)
                 return None
+
+    # *************************************************************************
+
+    # getExtruderStepsMM Method
+    # *************************************************************************
+    def getExtruderStepsMM(self):
+        r"""
+        getExtruderStepsMM method
+
+        Returns extruder steps per mm
+        """
+        if self._beeCon.dummyPlugConnected():
+            return 441.3897
+
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        with self._commandLock:
+            try:
+                replyStr = self._beeCon.sendCmd('M200')
+
+                eSteps = 441.3897
+
+                re1 = '.*?'  # Non-greedy match on filler
+                re2 = '[+-]?\\d*\\.\\d+(?![-+0-9\\.])'  # Uninteresting: float
+                re3 = '.*?'  # Non-greedy match on filler
+                re4 = '[+-]?\\d*\\.\\d+(?![-+0-9\\.])'  # Uninteresting: float
+                re5 = '.*?'  # Non-greedy match on filler
+                re6 = '[+-]?\\d*\\.\\d+(?![-+0-9\\.])'  # Uninteresting: float
+                re7 = '.*?'  # Non-greedy match on filler
+                re8 = '([+-]?\\d*\\.\\d+)(?![-+0-9\\.])'  # Float 1
+
+                rg = re.compile(re1 + re2 + re3 + re4 + re5 + re6 + re7 + re8, re.IGNORECASE | re.DOTALL)
+                m = rg.search(replyStr)
+                if m:
+                    eSteps = m.group(1)
+
+                return eSteps
+            except Exception as ex:
+                # in case of communication error returns a negative value signal to signal the error
+                return -1.0
+    # *************************************************************************
+
+    # setExtruderStepsMM Method
+    # *************************************************************************
+    def setExtruderStepsMM(self,steps):
+        r"""
+        getExtruderStepsMM method
+
+        Defines extruder steps per mm
+        """
+
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        with self._commandLock:
+            try:
+                self._beeCon.sendCmd('M200 E{}'.format(str(steps)),wait='ok')
+
+                self._beeCon.sendCmd('M1030')
+
+                return
+            except Exception as ex:
+                # in case of communication error returns a negative value signal to signal the error
+                return -1.0
 
     @staticmethod
     def generatePrintInfoHeader(filePath, estimatedPrintTime, gcodeLines):

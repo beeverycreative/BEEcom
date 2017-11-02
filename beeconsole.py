@@ -308,9 +308,9 @@ def main(findAll=False):
             logger.info("Transfering GCode")
             args = var.split(" ")
             if len(args) > 2:
-                console.beeCmd.transferSDFile(args[1],args[2])
+                console.beeCmd.transferSDFile("gcodes/"+args[1],args[2])
             else:
-                console.beeCmd.transferSDFile(args[1])
+                console.beeCmd.transferSDFile("gcodes/"+args[1])
             #while console.beeCmd.getTransferCompletionState() is not None:
             #    time.sleep(0.5)
 
@@ -396,6 +396,16 @@ def main(findAll=False):
 
             nozzleSize = console.beeCmd.getNozzleSize()
             logger.info("Current nozzle size: %i",nozzleSize)
+
+        elif "-getesteps" in var.lower():
+            steps = console.beeCmd.getExtruderStepsMM()
+            logger.info("Steps per mm: {}".format(str(steps)))
+
+        elif "-setesteps" in var.lower():
+            splits = var.split(" ")
+            steps = float(splits[1])
+            console.beeCmd.setExtruderStepsMM(steps)
+
 
         elif "-read" in var.lower():
 
