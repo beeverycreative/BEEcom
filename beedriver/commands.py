@@ -1277,8 +1277,8 @@ class BeeCmd:
         getPrintVariables method
 
         Returns dict with Print Variables:
-            Estimated Time
-            Elapsed Time
+            Estimated Time (seconds)
+            Elapsed Time (seconds)
             Number of Lines
             Executed Lines
         """
@@ -1297,9 +1297,9 @@ class BeeCmd:
             try:
                 for s in split:
                     if 'A' in s:
-                        printStatus['Estimated Time'] = int(s[1:])
+                        printStatus['Estimated Time'] = int(s[1:]) * 60
                     elif 'B' in s:
-                        printStatus['Elapsed Time'] = int(s[1:])//(60*1000)
+                        printStatus['Elapsed Time'] = (int(s[1:])//(60*1000)) * 60
                     elif 'C' in s:
                         printStatus['Lines'] = int(s[1:])
                     elif 'D' in s:
