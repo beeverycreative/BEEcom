@@ -1777,7 +1777,7 @@ class BeeCmd:
             self._beeCon.sendCmd('M118 T{}'.format(sn))
 
     # *************************************************************************
-    #                            getTemperatures Method
+    #                        getTemperatures Method
     # *************************************************************************
     def getTemperatures(self):
         r"""
@@ -1817,7 +1817,7 @@ class BeeCmd:
         return temperatures
 
     # *************************************************************************
-    #                            getElectronicsTemperature Method
+    #                    getElectronicsTemperature Method
     # *************************************************************************
     def getElectronicsTemperature(self):
         r"""
@@ -1830,7 +1830,7 @@ class BeeCmd:
         return t['Electronics']
 
     # *************************************************************************
-    #                            getExtruderBlockTemperature Method
+    #                  getExtruderBlockTemperature Method
     # *************************************************************************
     def getExtruderBlockTemperature(self):
         r"""
@@ -1843,7 +1843,7 @@ class BeeCmd:
         return t['Block']
 
     # *************************************************************************
-    #                            getCurrentPrintFilename Method
+    #                    getCurrentPrintFilename Method
     # *************************************************************************
     def getCurrentPrintFilename(self):
         r"""
@@ -1873,8 +1873,7 @@ class BeeCmd:
                 return None
 
     # *************************************************************************
-
-    # getExtruderStepsMM Method
+    #                          getExtruderStepsMM Method
     # *************************************************************************
     def getExtruderStepsMM(self):
         r"""
@@ -1913,8 +1912,9 @@ class BeeCmd:
             except Exception as ex:
                 # in case of communication error returns a negative value signal to signal the error
                 return -1.0
+
     # *************************************************************************
-    # setExtruderStepsMM Method
+    #                         setExtruderStepsMM Method
     # *************************************************************************
     def setExtruderStepsMM(self,steps):
         r"""
