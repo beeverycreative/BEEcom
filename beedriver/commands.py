@@ -1914,12 +1914,11 @@ class BeeCmd:
                 # in case of communication error returns a negative value signal to signal the error
                 return -1.0
     # *************************************************************************
-
     # setExtruderStepsMM Method
     # *************************************************************************
     def setExtruderStepsMM(self,steps):
         r"""
-        getExtruderStepsMM method
+        setExtruderStepsMM method
 
         Defines extruder steps per mm
         """
@@ -1930,11 +1929,11 @@ class BeeCmd:
 
         with self._commandLock:
             try:
-                self._beeCon.sendCmd('M200 E{}'.format(str(steps)),wait='ok')
+                resp = self._beeCon.sendCmd('M200 E{}'.format(str(steps)),wait='ok')
 
-                self._beeCon.sendCmd('M1030')
+                resp = self._beeCon.sendCmd('M1030')
 
-                return
+                return resp
             except Exception as ex:
                 # in case of communication error returns a negative value signal to signal the error
                 return -1.0
