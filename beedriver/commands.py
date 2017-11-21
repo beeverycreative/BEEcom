@@ -50,7 +50,7 @@ class BeeCmd:
     load()                                                    Performs load filament operation
     unload()                                                  Performs unload operation
     startHeating(t,extruder)                                  Starts Heating procedure
-    getHeatingState()                                         Returns the current heating state progress
+    getHeatingProgress()                                         Returns the current heating state progress
     getTransferState()                                        Returns the transfer progress, if any is running
     cancelHeating()                                           Cancels Heating
     goToHeatPos()                                             Moves the printer to the heating coordinates
@@ -668,7 +668,7 @@ class BeeCmd:
 
         with self._commandLock:
             # get Temperature
-            resp = self._beeCon.sendCmd("M105\n")
+            resp = self._beeCon.sendCmd("M105\n", "ok", 2)
 
             try:
                 splits = resp.split(" ")
@@ -723,7 +723,7 @@ class BeeCmd:
 
         with self._commandLock:
             # get Target Temperature
-            resp = self._beeCon.sendCmd("M1029 \n")
+            resp = self._beeCon.sendCmd("M1029 \n", 'ok', 2)
 
             try:
                 splits = resp.split(" ")
@@ -731,7 +731,7 @@ class BeeCmd:
                 t = float(tStr[tStr.find("/") + 1:tStr.find("(")])
                 return t
             except Exception as ex:
-                logger.error("Error getting nozzle temperature: %s", str(ex))
+                logger.error("Error getting target temperature: %s", str(ex))
 
             return 0
 
@@ -789,11 +789,11 @@ class BeeCmd:
             return self._beeCon.waitForStatus('M703 S%.2f\n' % temperature, '3')
     
     # *************************************************************************
-    #                            getHeatingState Method
+    #                            getHeatingProgress Method
     # *************************************************************************
-    def getHeatingState(self):
+    def getHeatingProgress(self):
         r"""
-        getHeatingState method
+        getHeatingProgress method
 
         Returns the heating state in decimal percentage (float: 0.00 - 1.00)
         """
