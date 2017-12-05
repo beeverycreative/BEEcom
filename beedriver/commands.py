@@ -1938,6 +1938,19 @@ class BeeCmd:
                 # in case of communication error returns a negative value signal to signal the error
                 return -1.0
 
+    # *************************************************************************
+    # isExtruderCalibrated Method
+    # *************************************************************************
+    def isExtruderCalibrated(self):
+        r"""
+        returns true if printer was previously calibrated
+        :return:
+        """
+
+        steps = float(self.getExtruderStepsMM())
+
+        return not steps == 441.3897
+
     @staticmethod
     def generatePrintInfoHeader(filePath, estimatedPrintTime, gcodeLines):
         """

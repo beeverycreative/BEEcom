@@ -406,6 +406,9 @@ def main(findAll=False):
             steps = float(splits[1])
             console.beeCmd.setExtruderStepsMM(steps)
 
+        elif "-iscal" in var.lower():
+            resp = console.beeCmd.isExtruderCalibrated()
+            logger.info('estruder calibration status: {}'.format(resp))
 
         elif "-read" in var.lower():
 
