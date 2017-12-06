@@ -1915,7 +1915,7 @@ class BeeCmd:
     # *************************************************************************
     #                         setExtruderStepsMM Method
     # *************************************************************************
-    def setExtruderStepsMM(self,steps):
+    def setExtruderStepsMM(self, steps):
         r"""
         setExtruderStepsMM method
 
@@ -1928,7 +1928,7 @@ class BeeCmd:
 
         with self._commandLock:
             try:
-                resp = self._beeCon.sendCmd('M200 E{}'.format(str(steps)),wait='ok')
+                resp = self._beeCon.sendCmd('M200 E{}'.format(str(steps)), wait='ok')
 
                 resp = self._beeCon.sendCmd('M1030')
 
