@@ -1695,7 +1695,6 @@ class BeeCmd:
         """
         nozzle = 400
         if self._beeCon.dummyPlugConnected():
-            nozzle = 400
             return nozzle
 
         if self.isTransferring():
@@ -1939,7 +1938,7 @@ class BeeCmd:
                 return -1.0
 
     # *************************************************************************
-    # isExtruderCalibrated Method
+    #                       isExtruderCalibrated Method
     # *************************************************************************
     def isExtruderCalibrated(self):
         r"""
