@@ -127,6 +127,9 @@ class BeeCmd:
 
         self._commandLock = threading.Lock()
 
+        self._printStatus = {}
+        self._currentNozzleTemperature = 0
+
         return
     
     # *************************************************************************
@@ -669,16 +672,19 @@ class BeeCmd:
         with self._commandLock:
             # get Temperature
             resp = self._beeCon.sendCmd("M105\n", "ok", 2)
-
             try:
                 splits = resp.split(" ")
                 tPos = splits[0].find("T:")
-                t = float(splits[0][tPos+2:])
-                return t
+                self._currentNozzleTemperature = float(splits[0][tPos+2:])
+
+            except ValueError as ve:
+                # if for some reason the temperature value could not be parsed as float,
+                #  returns the previous/current value
+                return self._currentNozzleTemperature
             except Exception as ex:
                 logger.error("Error getting nozzle temperature: %s", str(ex))
 
-            return 0
+            return self._currentNozzleTemperature
 
     # *************************************************************************
     #                        setNozzleTemperature Method
@@ -1288,27 +1294,25 @@ class BeeCmd:
             return None
 
         with self._commandLock:
-            printStatus = {}
-
             resp = self._beeCon.sendCmd('M32\n')
 
-            split = resp.split(' ')
+            if resp[:1] == 'A':
+                try:
+                    split = resp.split(' ')
+                    for s in split:
+                        if 'A' in s:
+                            self._printStatus['Estimated Time'] = int(s[1:]) * 60
+                        elif 'B' in s:
+                            self._printStatus['Elapsed Time'] = (int(s[1:])//(60*1000)) * 60
+                        elif 'C' in s:
+                            self._printStatus['Lines'] = int(s[1:])
+                        elif 'D' in s:
+                            self._printStatus['Executed Lines'] = int(s[1:])
+                            break  # If the D was found there is no need to process the string further
+                except Exception as ex:
+                    logger.warning('Error parsing print variables response: %s' % ex.message)
 
-            try:
-                for s in split:
-                    if 'A' in s:
-                        printStatus['Estimated Time'] = int(s[1:]) * 60
-                    elif 'B' in s:
-                        printStatus['Elapsed Time'] = (int(s[1:])//(60*1000)) * 60
-                    elif 'C' in s:
-                        printStatus['Lines'] = int(s[1:])
-                    elif 'D' in s:
-                        printStatus['Executed Lines'] = int(s[1:])
-                        break  # If the D was found there is no need to process the string further
-            except:
-                logger.warning('Error parsing print variables response')
-
-            return printStatus
+            return self._printStatus
 
     # *************************************************************************
     #                        setBlowerSpeed Method
