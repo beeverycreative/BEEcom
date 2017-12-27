@@ -658,11 +658,11 @@ class Conn:
         else:
             logger.error(loggerMsg + ": " + libusbMsg)
 
-        if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
-            self._monitorConnection = False
-            if self._disconnectCallback is not None:
-                self._disconnectCallback()
-            self.connected = False
+        # if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
+        #     self._monitorConnection = False
+        #     if self._disconnectCallback is not None:
+        #         self._disconnectCallback()
+        #     self.connected = False
 
     def _connectionMonitorThread(self):
         """

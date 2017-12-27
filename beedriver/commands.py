@@ -78,7 +78,7 @@ class BeeCmd:
     enterShutdown()                                           Pauses print and sets printer in shutdown
     clearShutdownFlag()                                       Clears shutdown Flag
     sendCmd(cmd, wait, timeout)                               Sends command to printer
-    startStatusMonitor()                                      Starts the print status monitor thread
+    startPrintStatusMonitor()                                      Starts the print status monitor thread
     isHeating()                                               Returns True if heating is still in progress
     isTransferring()                                          Returns True if a file is being transfer
     isPaused()                                                Returns True if the printer is in Pause state
@@ -112,7 +112,7 @@ class BeeCmd:
         self._beeCon = conn
         self._connected = self._beeCon.isConnected()
         self._transfThread = None
-        self._statusThread = None
+        self._printStatusThread = None
 
         self._calibrationState = 0
         self._setPointTemperature = 0
@@ -1265,9 +1265,9 @@ class BeeCmd:
 
         # We must make sure the status monitor thread if finished before cancelling the print to avoid
         # status updates even after the print was cancelled
-        self.stopStatusMonitor()
-        if self._statusThread is not None:
-            while self._statusThread.isRunning():
+        self.stopPrintStatusMonitor()
+        if self._printStatusThread is not None:
+            while self._printStatusThread.isRunning():
                 time.sleep(0.1)
 
         with self._commandLock:
@@ -1534,7 +1534,7 @@ class BeeCmd:
             self._pausing = True
             self._beeCon.sendCmd('M640\n', "3")
 
-            self.stopStatusMonitor()
+            self.stopPrintStatusMonitor()
 
             if self._beeCon.dummyPlugConnected():
                 self._paused = True
@@ -1631,9 +1631,9 @@ class BeeCmd:
             return self._beeCon.sendCmd(cmd, wait, timeout)
 
     # *************************************************************************
-    #                            startStatusMonitor Method
+    #                            startPrintStatusMonitor Method
     # *************************************************************************
-    def startStatusMonitor(self, statusCallback):
+    def startPrintStatusMonitor(self, statusCallback):
         """
         Starts the monitor thread for the print status progress
 
@@ -1643,21 +1643,21 @@ class BeeCmd:
         """
         # starts the status thread
         if statusCallback is not None:
-            self._statusThread = printStatusThread.PrintStatusThread(self._beeCon,
+            self._printStatusThread = printStatusThread.PrintStatusThread(self._beeCon,
                                                                      statusCallback)
-            self._statusThread.start()
+            self._printStatusThread.start()
 
     # *************************************************************************
-    #                            stopStatusMonitor Method
+    #                            stopPrintStatusMonitor Method
     # *************************************************************************
-    def stopStatusMonitor(self):
+    def stopPrintStatusMonitor(self):
         """
         Stops the status monitor thread if it is running
         :return:
         """
         # starts the status thread
-        if self._statusThread is not None:
-            self._statusThread.stopStatusMonitor()
+        if self._printStatusThread is not None and self._printStatusThread.isAlive():
+            self._printStatusThread.stopPrintStatusMonitor()
 
     # *************************************************************************
     #                            getCommandLock Method

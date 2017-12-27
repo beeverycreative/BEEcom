@@ -68,12 +68,12 @@ class PrintStatusThread(threading.Thread):
                     printVars['Executed Lines'] >= printVars['Lines']:
                 # the print has finished
                 self._responseCallback(printVars)
-                break
+                return
 
             self._responseCallback(printVars)
             time.sleep(3)
 
-    def stopStatusMonitor(self):
+    def stopPrintStatusMonitor(self):
         """
         Forces the Status thread monitor to stop
         :return:
