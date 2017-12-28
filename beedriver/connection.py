@@ -691,6 +691,7 @@ class Conn:
                     if bytesw == 0:
                         self._disconnectCallback()
                         self.connected = False
-                except:
+                except Exception as ex:
+                    logger.warning('Unexpected exception while pinging the printer for connection: %s' % ex.message)
                     continue
 
