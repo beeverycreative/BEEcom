@@ -1933,8 +1933,7 @@ class BeeCmd:
 
         with self._commandLock:
             try:
-                resp = self._beeCon.sendCmd('M200 E{}'.format(str(steps)), wait='ok')
-
+                self._beeCon.sendCmd('M200 E{}'.format(str(steps)), wait='ok')
                 resp = self._beeCon.sendCmd('M1030')
 
                 return resp
@@ -1949,29 +1948,26 @@ class BeeCmd:
         r"""
         resetPrinterConfig method
 
-        Restes printer config to factory settings
+        Resets the printer config to factory settings
         """
-
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
             return None
 
         with self._commandLock:
             try:
-                resp = self._beeCon.sendCmd('M607', wait='ok')
-                resp = self._beeCon.sendCmd('M601', wait='ok')
+                self._beeCon.sendCmd('M607', wait='ok')
+                self._beeCon.sendCmd('M601', wait='ok')
+                self._beeCon.sendCmd('M1030')
 
-                resp = self._beeCon.sendCmd('M1030')
-
+                return True
             except Exception as ex:
                 # in case of communication error returns a negative value signal to signal the error
-                return -1.0
-
-        
-
+                logger.error('Error resetting printer configurations: %s' % ex.message)
+                return False
 
     # *************************************************************************
-    # isExtruderCalibrated Method
+    #                           isExtruderCalibrated Method
     # *************************************************************************
     def isExtruderCalibrated(self):
         r"""
