@@ -90,6 +90,7 @@ class BeeCmd:
     getCurrentPrintFilename()                                 Returns the name of the file currently being printed
     getExtruderStepsMM()                                      Returns Extruder steps per mm
     setExtruderStepsMM()                                      Defines Extruder Steps per mm
+    resetPrinterConfig()                                      Restes printer config to factory settings
     """
 
     MESSAGE_SIZE = 512
@@ -1942,7 +1943,35 @@ class BeeCmd:
                 return -1.0
 
     # *************************************************************************
-    #                       isExtruderCalibrated Method
+    #                         resetPrinterConfig Method
+    # *************************************************************************
+    def resetPrinterConfig(self):
+        r"""
+        resetPrinterConfig method
+
+        Restes printer config to factory settings
+        """
+
+        if self.isTransferring():
+            logger.debug('File Transfer Thread active, please wait for transfer thread to end')
+            return None
+
+        with self._commandLock:
+            try:
+                resp = self._beeCon.sendCmd('M607', wait='ok')
+                resp = self._beeCon.sendCmd('M601', wait='ok')
+
+                resp = self._beeCon.sendCmd('M1030')
+
+            except Exception as ex:
+                # in case of communication error returns a negative value signal to signal the error
+                return -1.0
+
+        
+
+
+    # *************************************************************************
+    # isExtruderCalibrated Method
     # *************************************************************************
     def isExtruderCalibrated(self):
         r"""

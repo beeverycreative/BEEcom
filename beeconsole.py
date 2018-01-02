@@ -410,6 +410,9 @@ def main(findAll=False):
             resp = console.beeCmd.isExtruderCalibrated()
             logger.info('estruder calibration status: {}'.format(resp))
 
+        elif "-reset" in var.lower():
+            resp = console.beeCmd.resetPrinterConfig()
+
         elif "-read" in var.lower():
 
             if not os.path.exists('reads'):
