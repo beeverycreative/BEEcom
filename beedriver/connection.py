@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import threading
 import time
+import datetime
 
 import usb
 import usb.core
@@ -94,6 +95,9 @@ class Conn:
 
         self._connectionMonitor = None
         self._monitorConnection = True
+
+        self._lastExceptionMsg = None
+        self._lastExceptionTimestamp = None
 
         return
 
@@ -653,10 +657,19 @@ class Conn:
         """
         libusbMsg = str(exception)
 
-        if "Operation timed out" in libusbMsg:
-            logger.debug(loggerMsg + ": " + libusbMsg)
+        # if an equal exception was logged during the last minute, skips the logging to avoid log file overload
+        sameExceptionTimeThreshold = datetime.datetime.now() - datetime.timedelta(minutes=1)  # One minute ago
+        if self._lastExceptionMsg is not None and self._lastExceptionTimestamp is not None\
+                and self._lastExceptionMsg == libusbMsg and self._lastExceptionTimestamp > sameExceptionTimeThreshold:
+            pass
         else:
-            logger.error(loggerMsg + ": " + libusbMsg)
+            if "Operation timed out" in libusbMsg:
+                logger.debug(loggerMsg + ": " + libusbMsg)
+            else:
+                logger.error(loggerMsg + ": " + libusbMsg)
+
+        self._lastExceptionTimestamp = datetime.datetime.now()
+        self._lastExceptionMsg = libusbMsg
 
         # if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
         #     self._monitorConnection = False
