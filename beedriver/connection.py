@@ -606,19 +606,15 @@ class Conn:
             True if connected
             False if disconnected
         """
-        timeout = Conn.READ_TIMEOUT
         with self._connectionLock:
             try:
-                time.sleep(0.009)
-                self.ep_out.write('M625\n')
-                time.sleep(0.009)
-            except:
-                return False
+                bytesw = self.ep_out.write('M637\n')
 
-            try:
-                # reads the response to clear the buffer
-                self.ep_in.read(Conn.DEFAULT_READ_LENGTH, timeout)
-            except:
+                if bytesw == 0:
+                    return False
+
+            except Exception as ex:
+                logger.error('Error pinging printer. Write exception: ' + ex.message)
                 return False
 
             return True
@@ -685,10 +681,9 @@ class Conn:
         # This variable can be used if we want to simulate a disconnect from the printer
         # if no disconnect is pretended just use a big enough value
         dummyPlugDisconnectSim = 10000  # number of 3 second cycles before a shutdown is simulated
-
+        failedPings = 3
         while self.connected is True:
-            time.sleep(3)
-
+            time.sleep(1)
             if self._monitorConnection is True:
                 if self._dummyPlug is True:
                     if dummyPlugDisconnectSim == 0:
@@ -698,10 +693,13 @@ class Conn:
                     else:
                         dummyPlugDisconnectSim -= 1
                         continue
-
                 try:
-                    bytesw = self.write('M637\n')
-                    if bytesw == 0:
+                    if not self.ping():
+                        failedPings -= 1
+                    else:
+                        failedPings = 3
+
+                    if failedPings == 0:
                         self._disconnectCallback()
                         self.connected = False
                 except Exception as ex:

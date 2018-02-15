@@ -1886,7 +1886,7 @@ class BeeCmd:
         Returns extruder steps per mm
         """
         if self._beeCon.dummyPlugConnected():
-            return 441.3897
+            return 440 #441.3897
 
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')
