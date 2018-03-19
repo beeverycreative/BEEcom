@@ -78,11 +78,13 @@ class BeeCmd:
     enterShutdown()                                           Pauses print and sets printer in shutdown
     clearShutdownFlag()                                       Clears shutdown Flag
     sendCmd(cmd, wait, timeout)                               Sends command to printer
-    startPrintStatusMonitor()                                      Starts the print status monitor thread
+    startPrintStatusMonitor()                                 Starts the print status monitor thread
     isHeating()                                               Returns True if heating is still in progress
     isTransferring()                                          Returns True if a file is being transfer
     isPaused()                                                Returns True if the printer is in Pause state
     isResuming()                                              Returns True if the printer is in Resuming state
+    isPreparingOrPrinting()                                   Returns True if the printer is either heating/transferring (preparing to print) or printing
+    isBusy()                                                  Returns True if the printer is either heating/transferring/printing or moving
     setSerialNumber()                                         Defines printer serial number
     getTemperatures()                                         Returns printer temperatures dict
     getElectronicsTemperature()                               Returns printer electronics temperature
@@ -296,6 +298,24 @@ class BeeCmd:
 
         status = self.getStatus()
         if status is not None and status == 'SD_Print':
+            return True
+
+        return False
+
+    # *************************************************************************
+    #                            isBusy Method
+    # *************************************************************************
+    def isBusy(self):
+        r"""
+        isBusy method
+
+        return True if the printer is either heating/transferring/printing or moving
+        """
+        if self.isTransferring() or self.isHeating():
+            return True
+
+        status = self.getStatus()
+        if status is not None and (status == 'SD_Print' or status == 'Moving'):
             return True
 
         return False

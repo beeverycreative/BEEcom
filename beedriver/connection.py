@@ -98,6 +98,7 @@ class Conn:
 
         self._lastExceptionMsg = None
         self._lastExceptionTimestamp = None
+        self._sameExceptionCounter = 0
 
         return
 
@@ -111,17 +112,17 @@ class Conn:
         Returns a Dictionary list of the printers.
         """
         self.printerList = []
+        dev_list = []
 
         if not self._dummyPlug:
             try:
-                dev_list = []
                 for dev in usb.core.find(idVendor=0xffff, idProduct=0x014e, find_all=True):
                     dev_list.append(dev)
 
                 for dev in usb.core.find(idVendor=0x29c9, find_all=True):
                     dev_list.append(dev)
 
-                # Smoothiboard
+                # Smoothieboard
                 for dev in usb.core.find(idVendor=0x1d50, find_all=True):
                     dev_list.append(dev)
             except Exception as ex:  # If any problems occurs in USB connection, enters to dummyplug mode
@@ -139,7 +140,6 @@ class Conn:
             return self.printerList
 
         for dev in dev_list:
-
             try:
                 currentSerialNumber = str(dev.serial_number)
             except:
@@ -608,12 +608,16 @@ class Conn:
         """
         with self._connectionLock:
             try:
-                bytesw = self.ep_out.write('M637\n')
+                bytesw = self.write('M637\n')
 
                 if bytesw == 0:
                     return False
 
             except Exception as ex:
+                commandsIntf = self.getCommandIntf()
+                if commandsIntf is not None and commandsIntf.isBusy():
+                    return True  # Considers success if the printer is busy moving or printing/heating/transferring
+
                 logger.error('Error pinging printer. Write exception: ' + ex.message)
                 return False
 
@@ -657,21 +661,23 @@ class Conn:
         sameExceptionTimeThreshold = datetime.datetime.now() - datetime.timedelta(minutes=1)  # One minute ago
         if self._lastExceptionMsg is not None and self._lastExceptionTimestamp is not None\
                 and self._lastExceptionMsg == libusbMsg and self._lastExceptionTimestamp > sameExceptionTimeThreshold:
-            pass
+                self._sameExceptionCounter += 1
+
+                # Forces disconnection if several usb messages are logged repeatedly
+                if self._sameExceptionCounter >= 20:
+                    self._monitorConnection = False
+                    if self._disconnectCallback is not None:
+                        self._disconnectCallback()
+                    self.connected = False
         else:
             if "Operation timed out" in libusbMsg:
                 logger.debug(loggerMsg + ": " + libusbMsg)
             else:
                 logger.error(loggerMsg + ": " + libusbMsg)
+            self._sameExceptionCounter = 0
 
         self._lastExceptionTimestamp = datetime.datetime.now()
         self._lastExceptionMsg = libusbMsg
-
-        # if ("No such device" in libusbMsg or "Access denied" in libusbMsg) and self.connected is True:
-        #     self._monitorConnection = False
-        #     if self._disconnectCallback is not None:
-        #         self._disconnectCallback()
-        #     self.connected = False
 
     def _connectionMonitorThread(self):
         """
@@ -679,20 +685,14 @@ class Conn:
         :return:
         """
         # This variable can be used if we want to simulate a disconnect from the printer
-        # if no disconnect is pretended just use a big enough value
-        dummyPlugDisconnectSim = 10000  # number of 3 second cycles before a shutdown is simulated
+        # If no disconnect simulation is intended just use a big enough value
+        dummyPlugDisconnectSim = 10000  # number of X second cycles (where X = sleep time used in the while loop)
+                                        # before a shutdown is simulated
+
         failedPings = 3
         while self.connected is True:
             time.sleep(1)
             if self._monitorConnection is True:
-                if self._dummyPlug is True:
-                    if dummyPlugDisconnectSim == 0:
-                        self._disconnectCallback()
-                        self.connected = False
-                        return
-                    else:
-                        dummyPlugDisconnectSim -= 1
-                        continue
                 try:
                     if not self.ping():
                         failedPings -= 1
@@ -702,7 +702,15 @@ class Conn:
                     if failedPings == 0:
                         self._disconnectCallback()
                         self.connected = False
-                except Exception as ex:
-                    logger.warning('Unexpected exception while pinging the printer for connection: %s' % ex.message)
-                    continue
 
+                    if self._dummyPlug is True:
+                        if dummyPlugDisconnectSim == 0:
+                            self._disconnectCallback()
+                            self.connected = False
+                            return
+                        else:
+                            dummyPlugDisconnectSim -= 1
+                            continue
+                except Exception as ex:
+                    logger.warning('Unexpected exception while pinging the printer for connection: %s' % str(ex))
+                    continue
