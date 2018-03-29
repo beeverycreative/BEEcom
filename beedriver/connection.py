@@ -126,7 +126,7 @@ class Conn:
                 for dev in usb.core.find(idVendor=0x1d50, find_all=True):
                     dev_list.append(dev)
             except Exception as ex:  # If any problems occurs in USB connection, enters to dummyplug mode
-                print 'BEEcom FATAL Error when trying to connect to USB interface: ' + ex.message
+                print 'BEEcom FATAL Error when trying to connect to USB interface: ' + str(ex)
                 print 'Check that you have libusb correctly installed.'
                 pass
 
@@ -303,6 +303,9 @@ class Conn:
                 return len(message)
             else:
                 try:
+                    if self.ep_out is None:  # This means something bad happened with the connection
+                        self._handleUnexpectedConnectionDrop()
+
                     bytes_written = self.ep_out.write(message, timeout)
                 except usb.core.USBError as usb_exception:
                     self._handleUSBException(usb_exception, "USB write data exception")
@@ -332,6 +335,10 @@ class Conn:
                 return "ok Q:0"
 
             try:
+
+                if self.ep_in is None:  # This means something bad happened with the connection
+                    self._handleUnexpectedConnectionDrop()
+
                 self.write("")
                 ret = self.ep_in.read(readLen, timeout)
                 resp = ''.join([chr(x) for x in ret])
@@ -608,17 +615,22 @@ class Conn:
         """
         with self._connectionLock:
             try:
-                bytesw = self.write('M637\n')
-
-                if bytesw == 0:
+                if self.ep_out is None:
                     return False
 
-            except Exception as ex:
-                commandsIntf = self.getCommandIntf()
-                if commandsIntf is not None and commandsIntf.isBusy():
-                    return True  # Considers success if the printer is busy moving or printing/heating/transferring
+                bytesw = self.ep_out.write('M637\n', 5000)
 
-                logger.error('Error pinging printer. Write exception: ' + ex.message)
+                if bytesw == 0:
+                    logger.warning('Ping failed...')
+                    return False
+
+            except usb.core.USBError as usb_exception:
+                # If the connection is busy and the operation timesout ignores the error and considers the ping success
+                if "Operation timed out" in str(usb_exception):
+                    logger.warning('Ping timeout...')
+                    return True
+
+                logger.error('Ping error:' + str(usb_exception))
                 return False
 
             return True
@@ -657,6 +669,11 @@ class Conn:
         """
         libusbMsg = str(exception)
 
+        # if the exception is an operation timed out just logs and returns
+        if "Operation timed out" in libusbMsg:
+            logger.warning(loggerMsg + ": " + libusbMsg)
+            return
+
         # if an equal exception was logged during the last minute, skips the logging to avoid log file overload
         sameExceptionTimeThreshold = datetime.datetime.now() - datetime.timedelta(minutes=1)  # One minute ago
         if self._lastExceptionMsg is not None and self._lastExceptionTimestamp is not None\
@@ -665,19 +682,25 @@ class Conn:
 
                 # Forces disconnection if several usb messages are logged repeatedly
                 if self._sameExceptionCounter >= 20:
-                    self._monitorConnection = False
-                    if self._disconnectCallback is not None:
-                        self._disconnectCallback()
-                    self.connected = False
+                    self._handleUnexpectedConnectionDrop()
+
+                    self._sameExceptionCounter = 0
+
         else:
-            if "Operation timed out" in libusbMsg:
-                logger.debug(loggerMsg + ": " + libusbMsg)
-            else:
-                logger.error(loggerMsg + ": " + libusbMsg)
+            logger.error(loggerMsg + ": " + libusbMsg)
             self._sameExceptionCounter = 0
 
         self._lastExceptionTimestamp = datetime.datetime.now()
         self._lastExceptionMsg = libusbMsg
+
+    def _handleUnexpectedConnectionDrop(self):
+        logger.error("Unexpected connection drop! Trying to reconnect...")
+
+        if not self.connectToFirstPrinter():
+            # In case the reconnect was not successful signals the client to disconnect
+            self._monitorConnection = False
+            if self._disconnectCallback is not None:
+                self._disconnectCallback()
 
     def _connectionMonitorThread(self):
         """

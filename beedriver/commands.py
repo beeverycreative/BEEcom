@@ -1331,7 +1331,7 @@ class BeeCmd:
                             self._printStatus['Executed Lines'] = int(s[1:])
                             break  # If the D was found there is no need to process the string further
                 except Exception as ex:
-                    logger.warning('Error parsing print variables response: %s' % ex.message)
+                    logger.warning('Error parsing print variables response: %s' % str(ex))
 
             return self._printStatus
 
@@ -1983,7 +1983,7 @@ class BeeCmd:
                 return True
             except Exception as ex:
                 # in case of communication error returns a negative value signal to signal the error
-                logger.error('Error resetting printer configurations: %s' % ex.message)
+                logger.error('Error resetting printer configurations: %s' % str(ex))
                 return False
 
     # *************************************************************************
