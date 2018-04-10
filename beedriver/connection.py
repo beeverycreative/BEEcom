@@ -717,6 +717,15 @@ class Conn:
             time.sleep(1)
             if self._monitorConnection is True:
                 try:
+                    if self._dummyPlug is True:
+                        if dummyPlugDisconnectSim == 0:
+                            self._disconnectCallback()
+                            self.connected = False
+                            return
+                        else:
+                            dummyPlugDisconnectSim -= 1
+                            continue
+
                     if not self.ping():
                         failedPings -= 1
                     else:
@@ -726,14 +735,6 @@ class Conn:
                         self._disconnectCallback()
                         self.connected = False
 
-                    if self._dummyPlug is True:
-                        if dummyPlugDisconnectSim == 0:
-                            self._disconnectCallback()
-                            self.connected = False
-                            return
-                        else:
-                            dummyPlugDisconnectSim -= 1
-                            continue
                 except Exception as ex:
                     logger.warning('Unexpected exception while pinging the printer for connection: %s' % str(ex))
                     continue
