@@ -317,12 +317,11 @@ class Conn:
     # *************************************************************************
     def read(self, timeout=2000, readLen=512):
         r"""
-        read method
-
         reads existing data from the communication buffer
 
         arguments:
-            timeout - optional communication timeout (default = 500ms)
+            timeout - optional communication timeout
+            readLen - optional read length in bytes
 
         returns:
             sret - string with data read from the buffer
@@ -670,7 +669,7 @@ class Conn:
         libusbMsg = str(exception)
 
         # if the exception is an operation timed out just logs and returns
-        if "Operation timed out" in libusbMsg:
+        if "Operation timed out" in libusbMsg or "timeout" in libusbMsg:
             logger.warning(loggerMsg + ": " + libusbMsg)
             return
 
@@ -680,10 +679,8 @@ class Conn:
                 and self._lastExceptionMsg == libusbMsg and self._lastExceptionTimestamp > sameExceptionTimeThreshold:
                 self._sameExceptionCounter += 1
 
-                # Forces disconnection if several usb messages are logged repeatedly
-                if self._sameExceptionCounter >= 20:
+                if self._sameExceptionCounter >= 20 and "Errno 19" in libusbMsg:
                     self._handleUnexpectedConnectionDrop()
-
                     self._sameExceptionCounter = 0
 
         else:
@@ -695,22 +692,30 @@ class Conn:
 
     def _handleUnexpectedConnectionDrop(self):
         logger.error("Unexpected connection drop! Trying to reconnect...")
+        self._monitorConnection = False
+        time.sleep(1)
 
-        if not self.connectToFirstPrinter():
-            # In case the reconnect was not successful signals the client to disconnect
-            self._monitorConnection = False
-            if self._disconnectCallback is not None:
-                self._disconnectCallback()
+        # if the monitor thread still hasn't signalled the client to disconnect, we can try to reconnect
+        if self.connected is True:
+            if not self.connectToFirstPrinter():
+                self.connected = False
+                # In case the reconnect was not successful signals the client to disconnect
+                if self._disconnectCallback is not None:
+                    self._disconnectCallback()
+            else:
+                # if the reconnection succeeded restarts the connection monitor
+                self._connectionMonitor = None
+                self.startConnectionMonitor()
 
     def _connectionMonitorThread(self):
         """
         Monitor thread to check if the connection to the printer is still active
         :return:
         """
-        # This variable can be used if we want to simulate a disconnect from the printer
+        # This variables is the number of seconds before a shutdown is simulated
+        # and can be used if we want to simulate a disconnect from the printer.
         # If no disconnect simulation is intended just use a big enough value
-        dummyPlugDisconnectSim = 10000  # number of X second cycles (where X = sleep time used in the while loop)
-                                        # before a shutdown is simulated
+        dummyPlugDisconnectSim = 10000
 
         failedPings = 3
         while self.connected is True:
