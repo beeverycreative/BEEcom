@@ -1875,7 +1875,7 @@ class BeeCmd:
         :return: string with the filename stored in the printer
         """
         if self._beeCon.dummyPlugConnected():
-            return "virtual-print-file.gco"
+            return "TECNET3.gcode"
 
         if self.isTransferring():
             logger.debug('File Transfer Thread active, please wait for transfer thread to end')

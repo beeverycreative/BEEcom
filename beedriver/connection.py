@@ -667,25 +667,36 @@ class Conn:
         :return:
         """
         libusbMsg = str(exception)
+        warning_messages = ['Operation timed out', 'timeout']
+        critical_messages = ['Input/Output Error', 'Pipe error']
 
-        # if the exception is an operation timed out just logs and returns
-        if "Operation timed out" in libusbMsg or "timeout" in libusbMsg:
-            logger.warning(loggerMsg + ": " + libusbMsg)
-            return
+        # checks if the message is just considered a warning
+        for msg in warning_messages:
+            if msg in libusbMsg:
+                if not self._exceptionLoggedRecently(libusbMsg):
+                    logger.warning(loggerMsg + ": " + libusbMsg)
 
-        # if an equal exception was logged during the last minute, skips the logging to avoid log file overload
-        sameExceptionTimeThreshold = datetime.datetime.now() - datetime.timedelta(minutes=1)  # One minute ago
-        if self._lastExceptionMsg is not None and self._lastExceptionTimestamp is not None\
-                and self._lastExceptionMsg == libusbMsg and self._lastExceptionTimestamp > sameExceptionTimeThreshold:
-                self._sameExceptionCounter += 1
+                self._lastExceptionTimestamp = datetime.datetime.now()
+                self._lastExceptionMsg = libusbMsg
+                return
 
-                if self._sameExceptionCounter >= 20 and "Errno 19" in libusbMsg:
-                    self._handleUnexpectedConnectionDrop()
-                    self._sameExceptionCounter = 0
+        # if the message is in the critical error message group, considers that there was a connection drop
+        for cr_msg in critical_messages:
+            if cr_msg in libusbMsg:
+                if not self._exceptionLoggedRecently(libusbMsg):
+                    logger.error(loggerMsg + ": " + libusbMsg)
 
-        else:
+                self._handleUnexpectedConnectionDrop()
+                self._lastExceptionTimestamp = datetime.datetime.now()
+                self._lastExceptionMsg = libusbMsg
+                return
+
+        if not self._exceptionLoggedRecently(libusbMsg):
             logger.error(loggerMsg + ": " + libusbMsg)
-            self._sameExceptionCounter = 0
+        else:
+            # If more than 20 equal exceptions are logged in a short time frame (1 min.), considers a connection drop
+            if self._sameExceptionCounter >= 20:
+                self._handleUnexpectedConnectionDrop()
 
         self._lastExceptionTimestamp = datetime.datetime.now()
         self._lastExceptionMsg = libusbMsg
@@ -706,6 +717,21 @@ class Conn:
                 # if the reconnection succeeded restarts the connection monitor
                 self._connectionMonitor = None
                 self.startConnectionMonitor()
+
+    def _exceptionLoggedRecently(self, exceptionMsg):
+        sameExceptionTimeThreshold = datetime.datetime.now() - datetime.timedelta(minutes=1)  # One minute ago
+
+        # if an equal exception was logged during the last minute, returns true
+        if self._lastExceptionMsg is not None and self._lastExceptionTimestamp is not None \
+                and self._lastExceptionMsg == exceptionMsg and \
+                self._lastExceptionTimestamp > sameExceptionTimeThreshold:
+
+                self._sameExceptionCounter += 1
+                return True
+
+        # resets the counter if its different or not recent
+        self._sameExceptionCounter = 0
+        return False
 
     def _connectionMonitorThread(self):
         """
