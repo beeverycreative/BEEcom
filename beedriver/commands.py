@@ -1953,8 +1953,8 @@ class BeeCmd:
 
         with self._commandLock:
             try:
-                self._beeCon.sendCmd('M200 E{}'.format(str(steps)), wait='ok')
-                resp = self._beeCon.sendCmd('M1030')
+                resp = self._beeCon.sendCmd('M200 E{}'.format(str(steps)), wait='ok')
+                #resp = self._beeCon.sendCmd('M1030')   #-> commented, to try to fix a bug of the validation of the operation of setting steps per mm, with M200.
 
                 return resp
             except Exception as ex:
